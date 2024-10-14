@@ -121,3 +121,47 @@ test('dialog box', async ({ page }) => {
     await page.getByRole('table').locator('tr', { hasText: "mdo@gmail.com" }).locator('.nb-trash').click()
     await expect(page.locator('table tr').first()).not.toHaveText('mdo@gmail.com') //test if the row with the email provided is not available anymore
 })
+
+test('web tables', async ({ page }) => {
+    await page.getByText('Tables & Data').click()
+    await page.getByText('Smart Table').click()
+
+    //get the row by any test in this row
+    const targetRow = page.getByRole('row', { name: "twitter@outlook.com" })
+    await targetRow.locator('.nb-edit').click()
+    await page.locator('input-editor').getByPlaceholder('Age').clear() //used placeholder age to identify correct cell in the table
+    await page.locator('input-editor').getByPlaceholder('Age').fill('35')
+    await page.locator('.nb-checkmark').click()
+
+    //Use playwright to find specific column if there are columns with the same values
+    await page.locator('.ng2-smart-pagination-nav').getByText('2').click()
+    const targetRowById = page.getByRole('row', { name: '11' }).filter({ has: page.locator('td').nth(1).getByText('11') }) //getByRole will return the rows in the table that contains the text 11, the filter will return all columns for each of the rows found, then only take the first column of those two rows and only find text 11 as part of the first column
+    await targetRowById.locator('.nb-edit').click()
+    await page.locator('input-editor').getByPlaceholder('E-mail').clear()
+    await page.locator('input-editor').getByPlaceholder('E-mail').fill('test@test.com')
+    await page.locator('.nb-checkmark').click()
+    await expect(targetRowById.locator('td').nth(5)).toHaveText('test@test.com')
+
+    //test filter of the table
+
+    const ages = ["20", "30", "40", "200"]
+
+    for (let age of ages) {
+        await page.locator('input-filter').getByPlaceholder('Age').clear()
+        await page.locator('input-filter').getByPlaceholder('Age').fill(age)
+        await page.waitForTimeout(500)
+        const ageRows = page.locator('tbody tr')
+
+        for (let row of await ageRows.all()) {
+            const cellValue = await row.locator('td').last().textContent() //extract the value of the age column in each row
+
+            if (age == '200') {
+                expect(await page.getByRole('table').textContent()).toContain('No data found') //verify no data found is displayed if age provided is above or below the maximum age in the table
+            } else {
+                expect(cellValue).toEqual(age) //verify ages in each row found is equal to age input in the age filter field
+            }
+
+        }
+    }
+
+})
