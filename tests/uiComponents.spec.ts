@@ -165,3 +165,46 @@ test('web tables', async ({ page }) => {
     }
 
 })
+
+test('datepicker', async ({ page }) => {
+    await page.getByText('Forms').click()
+    await page.getByText('Datepicker').click()
+
+    const calendarInputField = page.getByPlaceholder('Form Picker')
+    await calendarInputField.click()
+
+    //have to specify locator as playwright will select 30/31 from previous month and 1 on next month instead of the current month
+    await page.locator('[class="day-cell ng-star-inserted"]').getByText('1', { exact: true }).click() //code will search for the exact 1 instead of returning all days that contains 1. If not looking for exact, remove the exact: true parameter. Code above is hardcoded
+
+    await expect(calendarInputField).toHaveValue('Oct 1, 2024') //verify selected date
+})
+
+test('dynamic datepicker', async ({ page }) => {
+    await page.getByText('Forms').click()
+    await page.getByText('Datepicker').click()
+
+    const calendarInputField = page.getByPlaceholder('Form Picker')
+    await calendarInputField.click()
+
+    let date = new Date()
+    date.setDate(date.getDate() + 500)
+    const expectedDate = date.getDate().toString() //convert date value to string
+    const expectedMonthShort = date.toLocaleString('En-US', { month: 'short' })
+    const expectedMonthLong = date.toLocaleString('En-US', { month: 'long' })
+
+    const expectedYear = date.getFullYear()
+    const datetoAssert = `${expectedMonthShort} ${expectedDate}, ${expectedYear}` //formatting the date that was produced
+
+    //add logic to change months in the date picker
+    let calendarMonthAndYear = await page.locator('nb-calendar-view-mode').textContent()
+    const expectedMonthAndYear = `${expectedMonthLong} ${expectedYear}`
+
+    //loop until expected month and year is found
+    while (!calendarMonthAndYear.includes(expectedMonthAndYear)) {
+        await page.locator('nb-calendar-pageable-navigation [data-name="chevron-right"]').click()
+        calendarMonthAndYear = await page.locator('nb-calendar-view-mode').textContent()
+    }
+
+    await page.locator('[class="day-cell ng-star-inserted"]').getByText(expectedDate, { exact: true }).click()
+    await expect(calendarInputField).toHaveValue(datetoAssert) //verify selected date    
+})
